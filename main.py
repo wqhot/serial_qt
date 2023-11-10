@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sys
 import threading
 import struct
@@ -16,12 +17,20 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QStatusBar,
 )
+from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt, pyqtSignal
 
 PARAMS_ROWS = 6
 PARAMS_COLS = 10
 BAUD_RATE = 115200
-
+PARAMS_NAME = [
+    '测试', 'Param2', 'Param3', 'Param4', 'Param5', 'Param6', 'Param7', 'Param8', 'Param9', 'Param10',
+    'Param11', 'Param12', 'Param13', 'Param14', 'Param15', 'Param16', 'Param17', 'Param18', 'Param19', 'Param20',
+    'Param21', 'Param22', 'Param23', 'Param24', 'Param25', 'Param26', 'Param27', 'Param28', 'Param29', 'Param30',
+    'Param31', 'Param32', 'Param33', 'Param34', 'Param35', 'Param36', 'Param37', 'Param38', 'Param39', 'Param40',
+    'Param41', 'Param42', 'Param43', 'Param44', 'Param45', 'Param46', 'Param47', 'Param48', 'Param49', 'Param50',
+    'Param51', 'Param52', 'Param53', 'Param54', 'Param55', 'Param56', 'Param57', 'Param58', 'Param59', 'Param60'
+]
 
 class SerialData:
     def __init__(self, utime, params, msg_type, status, loop_count):
@@ -83,7 +92,7 @@ class MainWindow(QMainWindow):
         self.serial_port_combobox = QComboBox(self)
         self.populate_serial_ports()
 
-        self.open_serial_port_button = QPushButton("Open Serial Port", self)
+        self.open_serial_port_button = QPushButton("打开串口", self)
         self.open_serial_port_button.clicked.connect(self.open_serial_port)
 
         hbox = QHBoxLayout()
@@ -92,7 +101,7 @@ class MainWindow(QMainWindow):
 
         layout = QGridLayout()
         self.labels = [
-            ["Param{}".format(row * PARAMS_COLS + col) for col in range(PARAMS_COLS)]
+            [PARAMS_NAME[row * PARAMS_COLS + col] for col in range(PARAMS_COLS)]
             for row in range(PARAMS_ROWS)
         ]
         self.line_edits = [
@@ -136,7 +145,7 @@ class MainWindow(QMainWindow):
             self.serial_reader_thread.is_running = False
             self.serial_reader_thread.join()
             self.serial_port.close()
-            self.open_serial_port_button.setText("Open Serial Port")
+            self.open_serial_port_button.setText("打开串口")
             return
 
         port_name = self.serial_port_combobox.currentText()
@@ -149,7 +158,7 @@ class MainWindow(QMainWindow):
                 self.show_frame_header_error
             )
             self.serial_reader_thread.start()
-            self.open_serial_port_button.setText("Close Serial Port")
+            self.open_serial_port_button.setText("关闭串口")
         except serial.SerialException as e:
             print(e)
 
@@ -164,13 +173,13 @@ class MainWindow(QMainWindow):
         self.line_edit_widgets[1 + len(data.params)].setText(str(data.msg_type))
         self.line_edit_widgets[2 + len(data.params)].setText(str(data.status))
         self.line_edit_widgets[3 + len(data.params)].setText(str(data.loop_count))
-        self.status_bar.showMessage("Data received!")
+        self.status_bar.showMessage("收到数据")
 
     def show_checksum_error(self):
-        self.status_bar.showMessage("Checksum error!")
+        self.status_bar.showMessage("校验错误")
 
     def show_frame_header_error(self):
-        self.status_bar.showMessage("Frame header not found!")
+        self.status_bar.showMessage("未发现帧头")
 
 
 if __name__ == "__main__":
