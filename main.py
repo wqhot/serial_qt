@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import sys
-import threading
 import struct
 import serial
 import serial.tools.list_ports
@@ -18,7 +17,7 @@ from PyQt5.QtWidgets import (
     QStatusBar,
 )
 from PyQt5.QtGui import QFont
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, QThread
 
 PARAMS_ROWS = 6
 PARAMS_COLS = 10
@@ -41,7 +40,7 @@ class SerialData:
         self.loop_count = loop_count
 
 
-class SerialReaderThread(threading.Thread):
+class SerialReaderThread(QThread):
     data_received = pyqtSignal(SerialData)
     checksum_error = pyqtSignal()
     frame_header_error = pyqtSignal()
@@ -52,7 +51,7 @@ class SerialReaderThread(threading.Thread):
         self.is_running = True
 
     def run(self):
-        while self.running:
+        while self.is_running:
             if self.serial_port.read() == b"\xeb":
                 if self.serial_port.read() == b"\x90":
                     length = struct.unpack("<H", self.serial_port.read(2))[0]
@@ -78,6 +77,7 @@ class SerialReaderThread(threading.Thread):
                         data = SerialData(utime, params, msg_type, status, loop_count)
                         self.data_received.emit(data)
                     else:
+                        print("length={},checksum={},expect={}".format(length, sum&0xff, checksum))
                         self.checksum_error.emit()
                 else:
                     self.frame_header_error.emit()
@@ -139,11 +139,12 @@ class MainWindow(QMainWindow):
         self.serial_port_combobox.clear()
         for port in ports:
             self.serial_port_combobox.addItem(port.device)
+        # self.serial_port_combobox.addItem('/dev/tnt0')
 
     def open_serial_port(self):
         if self.serial_port is not None and self.serial_port.is_open:
             self.serial_reader_thread.is_running = False
-            self.serial_reader_thread.join()
+            self.serial_reader_thread.wait()
             self.serial_port.close()
             self.open_serial_port_button.setText("打开串口")
             return
@@ -163,6 +164,7 @@ class MainWindow(QMainWindow):
             print(e)
 
     def update_line_edits(self, data: SerialData):
+        self.status_bar.showMessage("收到数据")
         for i, value in enumerate(data.params):
             if i >= len(self.line_edit_widgets):
                 return
@@ -173,7 +175,6 @@ class MainWindow(QMainWindow):
         self.line_edit_widgets[1 + len(data.params)].setText(str(data.msg_type))
         self.line_edit_widgets[2 + len(data.params)].setText(str(data.status))
         self.line_edit_widgets[3 + len(data.params)].setText(str(data.loop_count))
-        self.status_bar.showMessage("收到数据")
 
     def show_checksum_error(self):
         self.status_bar.showMessage("校验错误")
