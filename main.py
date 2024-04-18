@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import sys
 import struct
+import os
+import csv
 import serial
 import serial.tools.list_ports
 from PyQt5.QtWidgets import (
@@ -15,6 +17,7 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QVBoxLayout,
     QStatusBar,
+    QFileDialog,
 )
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt, pyqtSignal, QThread
@@ -95,9 +98,15 @@ class MainWindow(QMainWindow):
         self.open_serial_port_button = QPushButton("打开串口", self)
         self.open_serial_port_button.clicked.connect(self.open_serial_port)
 
+        self.select_file_button = QPushButton("选择文件", self)
+        self.select_file_button.clicked.connect(self.select_file)
+
         hbox = QHBoxLayout()
         hbox.addWidget(self.serial_port_combobox)
         hbox.addWidget(self.open_serial_port_button)
+        hbox.addWidget(self.select_file_button)
+
+        self.csv_file_name = None
 
         layout = QGridLayout()
         self.labels = [
@@ -133,6 +142,30 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self.status_bar)
 
         self.show()
+
+    def select_file(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        file_name, _ = QFileDialog.getSaveFileName(self, "选择保存文件", "",
+                    "CSV Files (*.csv);;All Files (*)", options=options)
+        if file_name:
+            # Ensure that the file has a .csv extension
+            if not file_name.endswith('.csv'):
+                file_name += '.csv'
+
+            if os.access(os.path.dirname(file_name), os.W_OK):
+                with open(file_name, 'w', newline='', encoding='utf-8') as csvfile:
+                    csvwriter = csv.writer(csvfile)
+                    # Create and write data to CSV
+                    row_data = [
+                        "utime", "msg_type", "status", "loop_count", "params", *PARAMS_NAME
+                    ]
+                    csvwriter.writerow(row_data)
+
+                    self.csv_file_name = file_name
+                    self.status_bar.showMessage(f"文件将保存到: {file_name}")
+            else:
+                self.status_bar.showMessage(f"文件无法保存到: {file_name}")
 
     def populate_serial_ports(self):
         ports = serial.tools.list_ports.comports()
@@ -175,6 +208,15 @@ class MainWindow(QMainWindow):
         self.line_edit_widgets[1 + len(data.params)].setText(str(data.msg_type))
         self.line_edit_widgets[2 + len(data.params)].setText(str(data.status))
         self.line_edit_widgets[3 + len(data.params)].setText(str(data.loop_count))
+
+        if hasattr(self, 'csv_file_name') and self.csv_file_name is not None and os.access(os.path.dirname(self.csv_file_name), os.W_OK):
+            with open(self.csv_file_name, 'a', newline='', encoding='utf-8') as csvfile:
+                csvwriter = csv.writer(csvfile)
+                # Create and write data to CSV
+                row_data = [
+                    data.utime, data.msg_type, data.status, data.loop_count, *data.params
+                ]
+                csvwriter.writerow(row_data)
 
     def show_checksum_error(self):
         self.status_bar.showMessage("校验错误")
