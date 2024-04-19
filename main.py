@@ -158,7 +158,7 @@ class MainWindow(QMainWindow):
                     csvwriter = csv.writer(csvfile)
                     # Create and write data to CSV
                     row_data = [
-                        "utime", "msg_type", "status", "loop_count", "params", *PARAMS_NAME
+                        "utime", "msg_type", "status", "loop_count", *PARAMS_NAME
                     ]
                     csvwriter.writerow(row_data)
 
@@ -172,7 +172,7 @@ class MainWindow(QMainWindow):
         self.serial_port_combobox.clear()
         for port in ports:
             self.serial_port_combobox.addItem(port.device)
-        # self.serial_port_combobox.addItem('/dev/tnt0')
+        self.serial_port_combobox.addItem('/dev/tnt0')
 
     def open_serial_port(self):
         if self.serial_port is not None and self.serial_port.is_open:
@@ -200,14 +200,13 @@ class MainWindow(QMainWindow):
         self.status_bar.showMessage("收到数据")
         for i, value in enumerate(data.params):
             if i >= len(self.line_edit_widgets):
-                return
+                break
             self.line_edit_widgets[i].setText(str(value))
-        if len(data.params) + 4 > len(data.params):
-            return
-        self.line_edit_widgets[0 + len(data.params)].setText(str(data.utime))
-        self.line_edit_widgets[1 + len(data.params)].setText(str(data.msg_type))
-        self.line_edit_widgets[2 + len(data.params)].setText(str(data.status))
-        self.line_edit_widgets[3 + len(data.params)].setText(str(data.loop_count))
+        if not (len(data.params) + 4 > len(self.line_edit_widgets)):
+            self.line_edit_widgets[0 + len(data.params)].setText(str(data.utime))
+            self.line_edit_widgets[1 + len(data.params)].setText(str(data.msg_type))
+            self.line_edit_widgets[2 + len(data.params)].setText(str(data.status))
+            self.line_edit_widgets[3 + len(data.params)].setText(str(data.loop_count))
 
         if hasattr(self, 'csv_file_name') and self.csv_file_name is not None and os.access(os.path.dirname(self.csv_file_name), os.W_OK):
             with open(self.csv_file_name, 'a', newline='', encoding='utf-8') as csvfile:
