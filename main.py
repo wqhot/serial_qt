@@ -95,10 +95,10 @@ class MainWindow(QMainWindow):
         self.serial_port_combobox = QComboBox(self)
         self.populate_serial_ports()
 
-        self.open_serial_port_button = QPushButton("打开串口", self)
+        self.open_serial_port_button = QPushButton("开始接收/解析", self)
         self.open_serial_port_button.clicked.connect(self.open_serial_port)
 
-        self.select_file_button = QPushButton("选择文件", self)
+        self.select_file_button = QPushButton("保存解析结果到文件...", self)
         self.select_file_button.clicked.connect(self.select_file)
 
         hbox = QHBoxLayout()
@@ -144,35 +144,41 @@ class MainWindow(QMainWindow):
         self.show()
 
     def select_file(self):
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
-        file_name, _ = QFileDialog.getSaveFileName(self, "选择保存文件", "",
-                    "CSV Files (*.csv);;All Files (*)", options=options)
-        if file_name:
-            # Ensure that the file has a .csv extension
-            if not file_name.endswith('.csv'):
-                file_name += '.csv'
+        if self.csv_file_name is None:
+            options = QFileDialog.Options()
+            options |= QFileDialog.DontUseNativeDialog
+            file_name, _ = QFileDialog.getSaveFileName(self, "选择保存文件", "",
+                        "CSV Files (*.csv);;All Files (*)", options=options)
+            if file_name:
+                # Ensure that the file has a .csv extension
+                if not file_name.endswith('.csv'):
+                    file_name += '.csv'
 
-            if os.access(os.path.dirname(file_name), os.W_OK):
-                with open(file_name, 'w', newline='', encoding='utf-8') as csvfile:
-                    csvwriter = csv.writer(csvfile)
-                    # Create and write data to CSV
-                    row_data = [
-                        "utime", "msg_type", "status", "loop_count", *PARAMS_NAME
-                    ]
-                    csvwriter.writerow(row_data)
+                if os.access(os.path.dirname(file_name), os.W_OK):
+                    with open(file_name, 'w', newline='', encoding='utf-8') as csvfile:
+                        csvwriter = csv.writer(csvfile)
+                        # Create and write data to CSV
+                        row_data = [
+                            "utime", "msg_type", "status", "loop_count", *PARAMS_NAME
+                        ]
+                        csvwriter.writerow(row_data)
 
-                    self.csv_file_name = file_name
-                    self.status_bar.showMessage(f"文件将保存到: {file_name}")
-            else:
-                self.status_bar.showMessage(f"文件无法保存到: {file_name}")
+                        self.csv_file_name = file_name
+                        self.status_bar.showMessage(f"文件将保存到: {file_name}")
+                        self.select_file_button.setText("停止保存到文件")
+                else:
+                    self.status_bar.showMessage(f"文件无法保存到: {file_name}")
+        else:
+            self.csv_file_name = None
+            self.status_bar.showMessage("文件已保存")
+            self.select_file_button.setText("保存解析结果到文件...")
 
     def populate_serial_ports(self):
         ports = serial.tools.list_ports.comports()
         self.serial_port_combobox.clear()
         for port in ports:
             self.serial_port_combobox.addItem(port.device)
-        self.serial_port_combobox.addItem('/dev/tnt0')
+        # self.serial_port_combobox.addItem('/dev/tnt0')
 
     def open_serial_port(self):
         if self.serial_port is not None and self.serial_port.is_open:
